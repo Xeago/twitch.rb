@@ -8,12 +8,16 @@ def token(channel)
   s = open("http://api.twitch.tv/api/channels/#{channel}/access_token", &:read)
   JSON.parse(s)
 end
-def uri(channel, token)
-  encoded_token = URI.encode token["token"]  
-  sig = token["sig"]  
-  base = "http://usher.justin.tv/api/channel/hls/"  
 
-  "#{base}#{channel}.m3u8?token=#{encoded_token}&sig=#{sig}&allow_source=true"
+def uri(channel, token)
+  base = "http://usher.justin.tv/api/channel/hls/"
+  uri = URI("#{base}#{channel}")
+  uri.query = URI.encode_www_form({
+    sig: token["sig"],
+    token: token["token"],
+    allow_source: true,
+  })
+  uri.to_s
 end
 
 class Twitch < Thor
