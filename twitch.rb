@@ -2,6 +2,7 @@
 require 'open-uri'
 require 'json'
 require 'pry'
+require 'thor'
 
 def token(channel)
   s = open("http://api.twitch.tv/api/channels/#{channel}/access_token", &:read)
@@ -15,6 +16,11 @@ def uri(channel, token)
   "#{base}#{channel}.m3u8?token=#{encoded_token}&sig=#{sig}&allow_source=true"
 end
 
-channel = ARGV[0]
+class Twitch < Thor
+  desc "stream CHANNEL", "output an m3u8 suitable for VLC"
+  def stream(channel)
+    open(uri(channel, token(channel)), &:read).display 
+  end
+end
 
-open(uri(channel, token(channel)), &:read).display
+Twitch.start(ARGV)
