@@ -8,8 +8,10 @@ def token_uri(channel)
   URI.parse("http://api.twitch.tv/api/channels/#{channel}/access_token")
 end
 def token(channel)
-  s = Net::HTTP.get(token_uri(channel))
-  JSON.parse(s)
+  s = Net::HTTP.start('api.twitch.tv', use_ssl: true) do |http|
+     http.get(token_uri(channel), {'Client-ID' => 'jzkbprff40iqj646a697cyrvl0zt2m6'})
+  end
+  JSON.parse(s.body)
 end
 
 def stream_uri(channel)
