@@ -34,28 +34,6 @@ class Twitch < Thor
     m3u8 = Net::HTTP.get(uri)
     m3u8.display
   end
-
-  desc "vlc CHANNEL", "open the m3u8 stream in VLC (osx)"
-  def vlc(channel)
-    uri = stream_uri(channel)
-    m3u8 = Net::HTTP.get uri
-    vlc = IO.popen ['/Applications/VLC.app/Contents/MacOS/VLC', '-q', '-'], 'w'
-    pid = vlc.pid
-    vlc.write m3u8
-#    Signal.trap("INT") { Process.kill 15, pid; exit }
-    vlc.flush
-  end
-
-  desc "list DIRECTORY", "search for streams in DIRECTORY"
-  def list(*directory)
-    uri = URI("https://api.twitch.tv/kraken/streams")
-    game = directory.join ' '
-    uri.query = URI.encode_www_form({game: game})
-    r = Net::HTTP.get(uri)
-    streams = JSON.parse(r)
-    r = streams['streams'].map {|e| e['channel'] }.map {|c| [c['display_name'], c['status']]}
-    r.each {|e| puts "#{e[0]} #{e[1]}" }
-  end
 end
 
 Twitch.start(ARGV)
