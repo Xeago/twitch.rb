@@ -51,7 +51,8 @@ class Twitch < Thor
     uri = URI("https://api.twitch.tv/kraken/streams")
     game = directory.join ' '
     uri.query = URI.encode_www_form({game: game})
-    streams = JSON.parse(uri.open(&:read))
+    r = Net::HTTP.get(uri)
+    streams = JSON.parse(r)
     r = streams['streams'].map {|e| e['channel'] }.map {|c| [c['display_name'], c['status']]}
     r.each {|e| puts "#{e[0]} #{e[1]}" }
   end
