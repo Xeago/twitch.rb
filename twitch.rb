@@ -6,6 +6,7 @@ require 'thor'
 require 'twitch-api'
 require 'm3u8'
 require 'benchmark'
+require 'concurrent'
 require 'fileutils'
 
 
@@ -77,21 +78,28 @@ class TwitchRb < Thor
     have_md5 = Dir[prefix + '*' + extension + '.md5'].map { |f| File.basename(f)[0..-5] }
     needed = chunks - (have & have_md5)
     download_uris = needed.map {|e| [e, URI(base_uri + e)]}
-    Benchmark.benchmark("", 7) do |bm|
-      Net::HTTP.start(index_uri.host, index_uri.port, :use_ssl => index_uri.scheme == 'https') do |http|
-        download_uris.each_with_index do |(name, download), i|
-          bm.report "#{name} (#{i}/#{needed.size})" do
-            chunk_response = http.get download.path
-            File.open(prefix + name, 'w+') do |file|
-              file.write(chunk_response.body)
-            end
-            File.open(prefix + name + '.md5', 'w+') do |file|
-              file.write(chunk_response['etag'].delete '"')
-            end
+    pool = Concurrent::ThreadPoolExecutor.new(
+      :min_threads => [2, Concurrent.processor_count].max,
+      :max_threads => [2, Concurrent.processor_count * 2 + 2 ].max,
+      :max_queue   => 100,
+      :fallback_policy => :caller_runs
+    )
+    download_uris.each_with_index do |(name, download), i|
+      pool.post do
+        Net::HTTP.start(index_uri.host, index_uri.port, :use_ssl => index_uri.scheme == 'https') do |http|
+          chunk_response = http.get download.path
+          File.open(prefix + name, 'w+') do |file|
+            file.write(chunk_response.body)
           end
+          File.open(prefix + name + '.md5', 'w+') do |file|
+            file.write(chunk_response['etag'].delete '"')
+          end
+          puts "#{name} (#{pool.scheduled_task_count}/#{needed.size})"
         end
       end
     end
+    pool.shutdown
+    pool.wait_for_termination
     meta_files = {
         prefix + 'streamer.json' => to_json(streamer),
         prefix + 'video.json' => to_json(last_video),
