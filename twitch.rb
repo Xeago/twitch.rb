@@ -47,13 +47,14 @@ class TwitchRb < Thor
     m3u8.display
   end
 
-  desc "archive CHANNEL", "archive the most recent stream"
-  def archive(channel)
+  desc "archive CHANNEL [LIMIT]", "archive the most recent stream"
+  def archive(channel, limit=3)
+    limit = [limit, 100].min
     client = Twitch::Client.new client_id: (ENV['CLIENT_ID'] or raise "Set CLIENT_ID")
     user_response = client.get_users(login: channel)
     raise "Streamer not found: #{channel}" unless user_response.data.length == 1
     streamer = user_response.data.first
-    video_response = client.get_videos(user_id: streamer.id, period: "week")
+    video_response = client.get_videos(user_id: streamer.id, first: limit)
     raise "No videos found :<" unless video_response.data.length >= 1
     pool = Concurrent::ThreadPoolExecutor.new(
       :min_threads => [2, Concurrent.processor_count].max,
