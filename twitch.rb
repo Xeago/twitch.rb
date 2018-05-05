@@ -55,61 +55,61 @@ class TwitchRb < Thor
     streamer = user_response.data.first
     video_response = client.get_videos(user_id: streamer.id, period: "week")
     raise "No videos found :<" unless video_response.data.length >= 1
-    last_video = video_response.data.first
-    extractor = /(?<uuid>[^ _\/]+)_(?<streamer>[^ _\/]+)_(?<numbers>[^ \/]+)/
-    uuid, streamer, numbers  = extractor.match(last_video.thumbnail_url).captures
-    base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{streamer}_#{numbers}/chunked/"
-    index_uri = URI(base_uri + "index-dvr.m3u8")
-    puts({index: index_uri})
-    m3u8 = Net::HTTP.get(index_uri)
-    prefix = "#{streamer}/#{uuid}/#{numbers}/"
-    FileUtils::mkdir_p prefix
-
-    m3u8_path = prefix + "index.m3u8"
-    if File.exist? m3u8_path
-      return if m3u8 == File.open(m3u8_path).read
-    end
-
-    playlist = M3u8::Playlist.read(m3u8)
-    return if playlist.items.empty?
-    chunks = playlist.items.map(&:segment)
-    extension = File.extname(chunks[0])
-    have = Dir[prefix + '*' + extension].map { |f| File.basename f }
-    have_md5 = Dir[prefix + '*' + extension + '.md5'].map { |f| File.basename(f)[0..-5] }
-    needed = chunks - (have & have_md5)
-    download_uris = needed.map {|e| [e, URI(base_uri + e)]}
     pool = Concurrent::ThreadPoolExecutor.new(
       :min_threads => [2, Concurrent.processor_count].max,
-      :max_threads => [2, Concurrent.processor_count * 2 + 2 ].max,
-      :max_queue   => 100,
-      :fallback_policy => :caller_runs
+      :max_threads => Concurrent.processor_count * 4,
+      :max_queue   => 0,
     )
-    download_uris.each_with_index do |(name, download), i|
-      pool.post do
-        Net::HTTP.start(index_uri.host, index_uri.port, :use_ssl => index_uri.scheme == 'https') do |http|
-          chunk_response = http.get download.path
-          File.open(prefix + name, 'w+') do |file|
-            file.write(chunk_response.body)
+    video_response.data.reverse.each do |video|
+      extractor = /(?<uuid>[^ _\/]+)_(?<streamer>[^ _\/]+)_(?<numbers>[^ \/]+)/
+      uuid, streamer, numbers  = extractor.match(video.thumbnail_url).captures
+      base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{streamer}_#{numbers}/chunked/"
+      index_uri = URI(base_uri + "index-dvr.m3u8")
+      puts({index: index_uri})
+      m3u8 = Net::HTTP.get(index_uri)
+      prefix = "#{streamer}/#{uuid}/#{numbers}/"
+      FileUtils::mkdir_p prefix
+
+      m3u8_path = prefix + "index.m3u8"
+      if File.exist? m3u8_path
+        break if m3u8 == File.open(m3u8_path).read
+      end
+
+      playlist = M3u8::Playlist.read(m3u8)
+      break if playlist.items.empty?
+      chunks = playlist.items.map(&:segment)
+      extension = File.extname(chunks[0])
+      have = Dir[prefix + '*' + extension].map { |f| File.basename f }
+      have_md5 = Dir[prefix + '*' + extension + '.md5'].map { |f| File.basename(f)[0..-5] }
+      needed = chunks - (have & have_md5)
+      download_uris = needed.map {|e| [e, URI(base_uri + e)]}
+      download_uris.each_with_index do |(name, download), i|
+        pool.post do
+          Net::HTTP.start(index_uri.host, index_uri.port, :use_ssl => index_uri.scheme == 'https') do |http|
+            chunk_response = http.get download.path
+            File.open(prefix + name, 'w+') do |file|
+              file.write(chunk_response.body)
+            end
+            File.open(prefix + name + '.md5', 'w+') do |file|
+              file.write(chunk_response['etag'].delete '"')
+            end
+            puts "#{name} (#{pool.scheduled_task_count}/#{needed.size})"
           end
-          File.open(prefix + name + '.md5', 'w+') do |file|
-            file.write(chunk_response['etag'].delete '"')
-          end
-          puts "#{name} (#{pool.scheduled_task_count}/#{needed.size})"
+        end
+      end
+      meta_files = {
+          prefix + 'streamer.json' => to_json(streamer),
+          prefix + 'video.json' => to_json(video),
+          m3u8_path => m3u8,
+      }
+      meta_files.each do |path, contents|
+        File.open path, 'w+' do |f|
+          f.write contents
         end
       end
     end
     pool.shutdown
     pool.wait_for_termination
-    meta_files = {
-        prefix + 'streamer.json' => to_json(streamer),
-        prefix + 'video.json' => to_json(last_video),
-        m3u8_path => m3u8,
-    }
-    meta_files.each do |path, contents|
-      File.open path, 'w+' do |f|
-        f.write contents
-      end
-    end
   end
 end
 
