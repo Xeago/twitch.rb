@@ -73,11 +73,11 @@ class TwitchRb < Thor
 
       m3u8_path = prefix + "index.m3u8"
       if File.exist? m3u8_path
-        break if m3u8 == File.open(m3u8_path).read
+        next if m3u8 == File.open(m3u8_path).read
       end
 
       playlist = M3u8::Playlist.read(m3u8)
-      break if playlist.items.empty?
+      next if playlist.items.empty?
       chunks = playlist.items.map(&:segment)
       extension = File.extname(chunks[0])
       have = Dir[prefix + '*' + extension].map { |f| File.basename f }
