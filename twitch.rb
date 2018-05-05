@@ -49,7 +49,7 @@ class TwitchRb < Thor
 
   desc "archive CHANNEL [LIMIT]", "archive the most recent stream"
   def archive(channel, limit=3)
-    limit = [limit, 100].min
+    limit = [limit.to_i, 100].min
     client = Twitch::Client.new client_id: (ENV['CLIENT_ID'] or raise "Set CLIENT_ID")
     user_response = client.get_users(login: channel)
     raise "Streamer not found: #{channel}" unless user_response.data.length == 1
