@@ -8,6 +8,7 @@ require 'm3u8'
 require 'benchmark'
 require 'concurrent'
 require 'fileutils'
+require 'tempfile'
 
 
 def token_uri(channel)
@@ -79,19 +80,18 @@ class TwitchRb < Thor
       chunks = playlist.items.map(&:segment)
       extension = File.extname(chunks[0])
       have = Dir[prefix + '*' + extension].map { |f| File.basename f }
-      have_md5 = Dir[prefix + '*' + extension + '.md5'].map { |f| File.basename(f)[0..-5] }
-      needed = chunks - (have & have_md5)
+      needed = chunks - have
       download_uris = needed.map {|e| [e, URI(base_uri + e)]}
       download_uris.each_with_index do |(name, download), i|
         pool.post do
           Net::HTTP.start(index_uri.host, index_uri.port, :use_ssl => index_uri.scheme == 'https') do |http|
             chunk_response = http.get download.path
-            File.open(prefix + name, 'w+') do |file|
+            tmp = Tempfile.new(name)
+            File.open(tmp, 'w+') do |file|
               file.write(chunk_response.body)
             end
-            File.open(prefix + name + '.md5', 'w+') do |file|
-              file.write(chunk_response['etag'].delete '"')
-            end
+            FileUtils.ln(tmp.path, prefix + name)
+            tmp.close!
             puts "#{name} (#{pool.scheduled_task_count}/#{needed.size})"
           end
         end
