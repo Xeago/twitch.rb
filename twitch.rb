@@ -68,7 +68,8 @@ class TwitchRb < Thor
       index_uri = URI(base_uri + "index-dvr.m3u8")
       puts({index: index_uri})
       m3u8 = Net::HTTP.get(index_uri)
-      prefix = "#{archive_path}/#{user_id}/#{uuid}/#{numbers}/"
+      streamer_root = "#{archive_path}/#{user_id}/"
+      prefix = "#{streamer_root}/#{uuid}/#{numbers}/"
       FileUtils::mkdir_p prefix
 
       m3u8_path = prefix + "index.m3u8"
@@ -98,7 +99,7 @@ class TwitchRb < Thor
         end
       end
       meta_files = {
-          prefix + 'streamer.json' => to_json(streamer),
+          streamer_root + 'streamer.json' => to_json(streamer),
           prefix + 'video.json' => to_json(video),
           m3u8_path => m3u8,
       }
