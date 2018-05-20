@@ -61,13 +61,13 @@ class TwitchRb < Thor
       :max_queue   => 0,
     )
     video_response.data.reverse.each do |video|
-      extractor = /(?<uuid>[^ _\/]+)_(?<streamer>[^ _\/]+)_(?<numbers>[^ \/]+)/
-      uuid, streamer, numbers  = extractor.match(video.thumbnail_url).captures
-      base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{streamer}_#{numbers}/chunked/"
+      extractor = /(?<uuid>[^ _\/]+)_(?<user_id>[^ _\/]+)_(?<numbers>[^ \/]+)/
+      uuid, user_id, numbers  = extractor.match(video.thumbnail_url).captures
+      base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{user_id}_#{numbers}/chunked/"
       index_uri = URI(base_uri + "index-dvr.m3u8")
       puts({index: index_uri})
       m3u8 = Net::HTTP.get(index_uri)
-      prefix = "#{streamer}/#{uuid}/#{numbers}/"
+      prefix = "#{user_id}/#{uuid}/#{numbers}/"
       FileUtils::mkdir_p prefix
 
       m3u8_path = prefix + "index.m3u8"
