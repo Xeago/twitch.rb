@@ -48,6 +48,7 @@ class TwitchRb < Thor
 
   desc "archive CHANNEL [LIMIT]", "archive the most recent stream"
   def archive(channel, limit=3)
+    archive_path = ENV['ARCHIVE'] or "archive"
     limit = [limit.to_i, 100].min
     client = Twitch::Client.new client_id: (ENV['CLIENT_ID'] or raise "Set CLIENT_ID")
     user_response = client.get_users(login: channel)
@@ -67,7 +68,7 @@ class TwitchRb < Thor
       index_uri = URI(base_uri + "index-dvr.m3u8")
       puts({index: index_uri})
       m3u8 = Net::HTTP.get(index_uri)
-      prefix = "#{user_id}/#{uuid}/#{numbers}/"
+      prefix = "#{archive_path}/#{user_id}/#{uuid}/#{numbers}/"
       FileUtils::mkdir_p prefix
 
       m3u8_path = prefix + "index.m3u8"
