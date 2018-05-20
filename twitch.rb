@@ -48,7 +48,7 @@ class TwitchRb < Thor
 
   desc "archive CHANNEL [LIMIT]", "archive the most recent stream"
   def archive(channel, limit=3)
-    archive_path = ENV['ARCHIVE'] or "archive"
+    archive_path = (ENV['ARCHIVE'] or "archive")
     limit = [limit.to_i, 100].min
     client = Twitch::Client.new client_id: (ENV['CLIENT_ID'] or raise "Set CLIENT_ID")
     user_response = client.get_users(login: channel)
