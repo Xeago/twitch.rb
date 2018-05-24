@@ -120,7 +120,7 @@ class TwitchRb < Thor
       }
     end.group_by do |vod|
       user_name, uuid, numbers = vod[:video].match(
-        /#{Regexp.quote(archive_path)}\/(?<user_id>[^ _\/]+)\/(?<uuid>[^ _\/]+)\/(?<numbers>[^ \/]+)/).captures;
+        /(?<user_id>[^ _\/]+)\/(?<uuid>[^ _\/]+)\/(?<numbers>[^ \/]+)/).captures;
       user_name
     end
     File.open(archive_path + '/vods.json', 'w+')  do |file|
