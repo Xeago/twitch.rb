@@ -112,14 +112,15 @@ class TwitchRb < Thor
     pool.shutdown
     pool.wait_for_termination
     vods = Dir[archive_path + '/*/*/*/video.json'].map do |v|
-      playable = File.exist?(File.dirname(v) + "/index.m3u8") ? true : false
+      path = File.dirname(v)
+      playable = File.exist?(path + "/index.m3u8") ? true : false
       {
-        video: v,
+        video: path[archive_path.length+1..v.length],
         playable: playable
       }
     end.group_by do |vod|
       user_name, uuid, numbers = vod[:video].match(
-        /#{Regexp.quote(archive_path)}\/(?<user_id>[^ _\/]+)\/(?<uuid>[^ _\/]+)\/(?<numbers>[^ \/]+)\/video.json/).captures;
+        /#{Regexp.quote(archive_path)}\/(?<user_id>[^ _\/]+)\/(?<uuid>[^ _\/]+)\/(?<numbers>[^ \/]+)/).captures;
       user_name
     end
     File.open(archive_path + '/vods.json', 'w+')  do |file|
