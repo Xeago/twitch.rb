@@ -114,10 +114,14 @@ class TwitchRb < Thor
     vods = Dir[archive_path + '/*/*/*/video.json'].map do |v|
       path = File.dirname(v)
       playable = File.exist?(path + "/index.m3u8") ? true : false
-      {
-        video: path[archive_path.length+1..v.length],
+      relative_path = path[archive_path.length+1..v.length]
+      vod = {
+        meta: relative_path + '/video.json',
+        video: relative_path,
         playable: playable
       }
+      vod[:source] = relative_path + '/index.m3u8' if playable
+      vod
     end.group_by do |vod|
       user_name, uuid, numbers = vod[:video].match(
         /(?<user_id>[^ _\/]+)\/(?<uuid>[^ _\/]+)\/(?<numbers>[^ \/]+)/).captures;
