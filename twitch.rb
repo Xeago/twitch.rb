@@ -91,7 +91,7 @@ class TwitchRb < Thor
             end
             FileUtils.ln(tmp.path, prefix + name)
             tmp.close!
-            puts "#{name} (#{pool.scheduled_task_count}/#{needed.size})"
+            puts "#{prefix + name} (#{i}/#{pool.scheduled_task_count}/#{needed.size})"
           end
         end
       end
