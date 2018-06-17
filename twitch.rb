@@ -73,9 +73,6 @@ class TwitchRb < Thor
       FileUtils::mkdir_p prefix
 
       m3u8_path = prefix + "index.m3u8"
-      if File.exist? m3u8_path
-        next if m3u8 == File.open(m3u8_path).read
-      end
 
       playlist = M3u8::Playlist.read(m3u8)
       next if playlist.items.empty?
