@@ -38,6 +38,14 @@ def to_json(obj)
   JSON.dump(Hash[obj.instance_variables.map { |name| [name, obj.instance_variable_get(name)] }])
 end
 
+def m3u8_name(type, id)
+  if type == "archive"
+    "index-dvr.m3u8"
+  else
+    "highlight-#{id}.m3u8"
+  end
+end
+
 class TwitchRb < Thor
   desc "stream CHANNEL", "output an m3u8 suitable for VLC"
   def stream(channel)
@@ -65,14 +73,14 @@ class TwitchRb < Thor
       extractor = /(?<uuid>[^ _\/]+)_(?<user_id>[^ _\/]+)_(?<numbers>[^ \/]+)/
       uuid, user_id, numbers  = extractor.match(video.thumbnail_url).captures
       base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{user_id}_#{numbers}/chunked/"
-      index_uri = URI(base_uri + "index-dvr.m3u8")
+      m3u8_path = m3u8_name(video.type, video.id)
+      index_uri = URI(base_uri + m3u8_path)
       puts({index: index_uri})
       m3u8 = Net::HTTP.get(index_uri)
       streamer_root = "#{archive_path}/#{user_id}/"
       prefix = "#{streamer_root}/#{uuid}/#{numbers}/"
       FileUtils::mkdir_p prefix
 
-      m3u8_path = prefix + "index.m3u8"
 
       playlist = M3u8::Playlist.read(m3u8)
       next if playlist.items.empty?
@@ -95,10 +103,11 @@ class TwitchRb < Thor
           end
         end
       end
+      local_m3u8_path = prefix + m3u8_path
       meta_files = {
           streamer_root + 'streamer.json' => to_json(streamer),
-          prefix + 'video.json' => to_json(video),
-          m3u8_path => m3u8,
+          prefix + "video-#{video.id}.json" => to_json(video),
+          local_m3u8_path => m3u8,
       }
       meta_files.each do |path, contents|
         File.open path, 'w+' do |f|
@@ -108,16 +117,20 @@ class TwitchRb < Thor
     end
     pool.shutdown
     pool.wait_for_termination
-    vods = Dir[archive_path + '/*/*/*/video.json'].map do |v|
+    vods = Dir[archive_path + '/*/*/*/*.json'].map do |v|
+      video = JSON.parse(File.read(v))
+      meta_name = File.basename(v)
       path = File.dirname(v)
-      playable = File.exist?(path + "/index.m3u8") ? true : false
+      m3u8_path = m3u8_name(video['@type'], video['@id'])
+      playable = File.exist?("#{path}/#{m3u8_path}")
       relative_path = path[archive_path.length+1..v.length]
       vod = {
-        meta: relative_path + '/video.json',
+        meta: "#{relative_path}/#{meta_name}",
         video: relative_path,
-        playable: playable
+        playable: playable,
+        twitch: video,
       }
-      vod[:source] = relative_path + '/index.m3u8' if playable
+      vod[:source] = "#{relative_path}/#{m3u8_path}" if playable
       vod
     end.group_by do |vod|
       user_name, uuid, numbers = vod[:video].match(
