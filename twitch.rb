@@ -61,7 +61,10 @@ class TwitchRb < Thor
       :max_threads => Concurrent.processor_count * 4,
       :max_queue   => 0,
     )
-    video_response.data.reverse.each do |video|
+    archives = video_response.data.select do |video|
+      video.type == "archive"
+    end
+    archives.reverse.each do |video|
       extractor = /(?<uuid>[^ _\/]+)_(?<user_id>[^ _\/]+)_(?<numbers>[^ \/]+)/
       uuid, user_id, numbers  = extractor.match(video.thumbnail_url).captures
       base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{user_id}_#{numbers}/chunked/"
