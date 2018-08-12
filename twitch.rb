@@ -38,6 +38,14 @@ def to_json(obj)
   JSON.dump(Hash[obj.instance_variables.map { |name| [name, obj.instance_variable_get(name)] }])
 end
 
+def video_json_name(type, id)
+  if type == "archive"
+    "video-#{id}.json"
+  else
+    "highlight-#{id}.json"
+  end
+end
+
 def m3u8_name(type, id)
   if type == "archive"
     "index-dvr.m3u8"
@@ -106,7 +114,7 @@ class TwitchRb < Thor
       local_m3u8_path = prefix + m3u8_path
       meta_files = {
           streamer_root + 'streamer.json' => to_json(streamer),
-          prefix + "video-#{video.id}.json" => to_json(video),
+          prefix + video_json_name(video.type, video.id) => to_json(video),
           local_m3u8_path => m3u8,
       }
       meta_files.each do |path, contents|
