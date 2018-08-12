@@ -25,6 +25,7 @@ The current format consists of two parts, top-level `vods.json` and a `video.jso
       "video": "relative/path/to/",
       "playable": true,
       "source": "relative/path/to/index.m3u8",
+      "twitch": {.. contents of meta ..},
     },
 //  ...
   ]
