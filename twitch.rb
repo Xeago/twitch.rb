@@ -62,6 +62,36 @@ class TwitchRb < Thor
     m3u8.display
   end
 
+  desc "gc [LIMIT]", "gc the oldest LIMIT streams"
+  def gc(limit=10)
+    limit=limit.to_i
+    archive_path = (ENV['ARCHIVE'] or "archive")
+    state = JSON.parse(File.read("#{archive_path}/vods.json")).flat_map do |channel,vods|
+      vods.each{|v| v['channel']=channel}
+    end.group_by do |e|
+      e['video']
+    end.sort_by do |dir, streams|
+      streams.min_by {|video| video['twitch']['@published_at']}['twitch']['@published_at']
+    end.map do |dir, streams|
+      path = "#{archive_path}/#{dir}"
+      size = Pathname(path).find.select{|f| f.to_s.end_with? '.ts'}.map(&:size).reduce(&:+)
+      [path, {
+          streams: streams.size,
+          date: streams.min_by {|video| video['twitch']['@published_at']}['twitch']['@published_at'],
+          size: (size or 0)/1024/1024/1024,
+        }
+      ]
+    end.select do |dir, meta|
+      meta[:size] > 0
+    end
+    to_be_deleted = state.size - limit
+    while to_be_deleted > 0 do
+      path, meta = state.pop
+      to_be_deleted -= meta[:streams]
+      puts "rm #{path}/*{ts,m3u8}          | #{meta[:streams]} | #{meta[:size]} GiB   #{meta[:date]}"
+    end
+  end
+
   desc "archive CHANNEL [LIMIT]", "archive the most recent stream"
   def archive(channel, limit=3)
     archive_path = (ENV['ARCHIVE'] or "archive")
