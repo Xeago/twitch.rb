@@ -89,8 +89,11 @@ class TwitchRb < Thor
       prefix = "#{streamer_root}/#{uuid}/#{numbers}/"
       FileUtils::mkdir_p prefix
 
+      # In some cases the playlist contains a discontinuous chunk. The m3u8 library in use doesn't know this extension.
+      # This technically breaks the spec, but we're missing streams to mirror right now.
+      patched_m3u8 = m3u8.gsub(/^#EXT-X-DISCONTINUITY$/,'')
 
-      playlist = M3u8::Playlist.read(m3u8)
+      playlist = M3u8::Playlist.read(patched_m3u8)
       next if playlist.items.empty?
       chunks = playlist.items.map(&:segment)
       extension = File.extname(chunks[0])
