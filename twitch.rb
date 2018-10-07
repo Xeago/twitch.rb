@@ -109,6 +109,10 @@ class TwitchRb < Thor
     )
     video_response.data.reverse.each do |video|
       extractor = /(?<uuid>[^ _\/]+)_(?<user_id>[^ _\/]+)_(?<numbers>[^ \/]+)/
+      unless video.thumbnail_url
+        puts "No thumbnail for #{video.url}"
+        next
+      end
       uuid, user_id, numbers  = extractor.match(video.thumbnail_url).captures
       base_uri = "https://vod-pop-secure.twitch.tv/#{uuid}_#{user_id}_#{numbers}/chunked/"
       m3u8_path = m3u8_name(video.type, video.id)
