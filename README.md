@@ -5,6 +5,7 @@ Simple twitch client displaying and archiving a playlist for a livestream.
 ```
   twitch.rb stream CHANNEL           # output an m3u8 suitable for most media players
   twitch.rb archive CHANNEL [LIMIT]  # archive the most recent streams
+  twitch.rb gc [LIMIT]               # Show commands and statistics to limit the archive
 ```
 
 ## Installation
