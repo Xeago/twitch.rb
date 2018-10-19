@@ -83,7 +83,7 @@ class TwitchRb < Thor
       ]
     end.select do |dir, meta|
       meta[:size] > 0
-    end
+    end.reverse
     to_be_deleted = state.size - limit
     while to_be_deleted > 0 do
       path, meta = state.pop
