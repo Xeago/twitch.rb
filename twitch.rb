@@ -63,6 +63,7 @@ class TwitchRb < Thor
   end
 
   desc "gc [LIMIT]", "gc the oldest LIMIT streams"
+  method_options :system => :boolean
   def gc(limit=10)
     limit=limit.to_i
     archive_path = (ENV['ARCHIVE'] or "archive")
@@ -88,7 +89,11 @@ class TwitchRb < Thor
     while to_be_deleted > 0 do
       path, meta = state.pop
       to_be_deleted -= meta[:streams]
-      puts "rm #{path}/*{ts,m3u8}          | #{meta[:streams]} | #{meta[:size]} GiB   #{meta[:date]}"
+      cmd = "rm #{path}/*{ts,m3u8}"
+      puts "#{cmd}   | #{meta[:streams]} | #{meta[:size]} GiB   #{meta[:date]}"
+      if options[:system]
+        system(cmd)
+      end
     end
   end
 
